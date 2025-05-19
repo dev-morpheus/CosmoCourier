@@ -1,0 +1,14 @@
+{
+  "name": "prova_poo",
+  "version": "1.0.0",
+  "description": "projeto simulador de transporte",
+  "main": "simulador_transp.ts",
+  "scripts": {
+    "test": "npm test"
+  },
+  "keywords": [
+    "simulacao"
+  ],
+  "author": "Luis Felipe",
+  "license": "ISC"
+}
