@@ -43,7 +43,7 @@ var BioSample = /** @class */ (function (_super) {
     function BioSample(name) {
         return _super.call(this, name, BioSample.size) || this;
     }
-    BioSample.size = 59;
+    BioSample.size = 60;
     return BioSample;
 }(Cargo));
 var SupplyPack = /** @class */ (function (_super) {
@@ -51,7 +51,7 @@ var SupplyPack = /** @class */ (function (_super) {
     function SupplyPack(name) {
         return _super.call(this, name, SupplyPack.size) || this;
     }
-    SupplyPack.size = 105;
+    SupplyPack.size = 120;
     return SupplyPack;
 }(Cargo));
 var ArmoredCapsule = /** @class */ (function (_super) {
@@ -59,17 +59,19 @@ var ArmoredCapsule = /** @class */ (function (_super) {
     function ArmoredCapsule(name) {
         return _super.call(this, name, ArmoredCapsule.size) || this;
     }
-    ArmoredCapsule.size = 251;
+    ArmoredCapsule.size = 250;
     return ArmoredCapsule;
 }(Cargo));
 var Transport = /** @class */ (function () {
-    function Transport(name, capacity, level, speed, fuelConsumption) {
+    function Transport(name, capacity, level, speed, fuelConsumption, fuelCapacity) {
         this.cargos = [];
         this.name = name;
         this.capacity = capacity;
         this.level = level;
         this.speed = speed;
         this.fuelConsumption = fuelConsumption;
+        this.fuelCapacity = fuelCapacity;
+        this.fuelRemaining = fuelCapacity;
     }
     Transport.prototype.canTransport = function (cargo) {
         return this.level.includes(cargo.classify_size());
@@ -85,77 +87,152 @@ var Transport = /** @class */ (function () {
         return this.cargos;
     };
     Transport.prototype.getFuelNeeded = function (distance) {
-        return distance * this.fuelConsumption;
+        var distMilhoes = distance / 1000000;
+        return distMilhoes * this.fuelConsumption;
     };
-    Transport.prototype.getAutonomy = function () {
-        return this.capacity * 10;
+    Transport.prototype.getFuelCapacity = function () {
+        return this.fuelCapacity;
     };
     Transport.prototype.canReach = function (distance) {
-        return this.getFuelNeeded(distance) <= this.getAutonomy();
+        return this.getFuelNeeded(distance) <= this.fuelRemaining;
+    };
+    Transport.prototype.useFuel = function (amount) {
+        this.fuelRemaining = Math.max(0, this.fuelRemaining - amount);
+    };
+    Transport.prototype.getRemainingFuel = function () {
+        return this.fuelRemaining;
     };
     return Transport;
 }());
 var Vostok = /** @class */ (function (_super) {
     __extends(Vostok, _super);
     function Vostok(name) {
-        return _super.call(this, name, 2, ["amostras biológicas"], 15000, 0.5) || this;
+        return _super.call(this, name, 10, ["amostras biológicas"], 15000, 10, 500) || this;
     }
     return Vostok;
 }(Transport));
 var Mercury = /** @class */ (function (_super) {
     __extends(Mercury, _super);
     function Mercury(name) {
-        return _super.call(this, name, 4, ["amostras biológicas", "pacote de suprimentos", "tanques de oxigênio"], 18000, 0.7) || this;
+        return _super.call(this, name, 20, ["amostras biológicas", "pacote de suprimentos", "tanques de oxigênio"], 18000, 5, 1000) || this;
     }
     return Mercury;
 }(Transport));
 var Gemini = /** @class */ (function (_super) {
     __extends(Gemini, _super);
     function Gemini(name) {
-        return _super.call(this, name, 6, ["amostras biológicas", "pacote de suprimentos", "tanques de oxigênio", "cápsulas blindadas", "ferramenta de mineração"], 20000, 0.9) || this;
+        return _super.call(this, name, 30, ["amostras biológicas", "pacote de suprimentos", "tanques de oxigênio", "cápsulas blindadas", "ferramenta de mineração"], 20000, 4, 2000) || this;
     }
     return Gemini;
 }(Transport));
 var Destination = /** @class */ (function () {
-    function Destination(name, distance) {
+    function Destination(name, distance, acceptedTypes) {
         this.name = name;
         this.distance = distance;
+        this.acceptedTypes = acceptedTypes;
     }
+    Destination.prototype.accepts = function (cargo) {
+        return this.acceptedTypes.includes(cargo.classify_size());
+    };
     return Destination;
 }());
 var Trip = /** @class */ (function () {
     function Trip(destination, transport) {
-        this.origin = "Terra"; // fixo
+        this.origin = "Terra";
         this.destination = destination;
         this.transport = transport;
         this.cargo = transport.getCargo();
     }
     Trip.prototype.startTrip = function () {
-        console.log("Iniciando viagem da ".concat(this.origin, " para ").concat(this.destination.name, " com a nave ").concat(this.transport.name, "."));
-        console.log("Dist\u00E2ncia: ".concat(this.destination.distance, " km"));
-        console.log("Velocidade: ".concat(this.transport.speed, " km/h"));
-        console.log("Consumo: ".concat(this.transport.fuelConsumption, " unidades/km"));
-        console.log("Autonomia: ".concat(this.transport.getAutonomy(), " unidades"));
+        var _this = this;
+        var distMilhoes = (this.destination.distance / 1000000).toFixed(0);
         var fuelNeeded = this.transport.getFuelNeeded(this.destination.distance);
-        console.log("Combust\u00EDvel necess\u00E1rio: ".concat(fuelNeeded.toFixed(2), " unidades"));
-        if (this.transport.canReach(this.destination.distance)) {
-            console.log("✅ A missão pode ser completada com sucesso.");
+        var nomeNave = this.transport.name;
+        var destino = this.destination.name;
+        console.log("\nMiss\u00E3o: ".concat(nomeNave, " -> ").concat(destino));
+        if (!this.transport.canReach(this.destination.distance)) {
+            console.log("A ".concat(nomeNave, " n\u00E3o possui combust\u00EDvel suficiente para alcan\u00E7ar ").concat(destino, ". Miss\u00E3o abortada."));
+            console.log("Combust\u00EDvel restante: ".concat(this.transport.getRemainingFuel().toFixed(1), "\n"));
+            return;
+        }
+        this.transport.useFuel(fuelNeeded);
+        if (this.cargo.length === 0) {
+            console.log("A ".concat(nomeNave, " n\u00E3o transportava nenhuma carga."));
         }
         else {
-            console.log("❌ A missão falhará por falta de autonomia.");
+            this.cargo.forEach(function (c) {
+                var cargaNome = c.getName();
+                var tipo = c.classify_size();
+                if (_this.transport.canTransport(c) && _this.destination.accepts(c)) {
+                    console.log("A ".concat(nomeNave, " entregou uma \"").concat(cargaNome, "\" a ").concat(destino, "."));
+                }
+                else {
+                    console.log("A ".concat(nomeNave, " n\u00E3o conseguiu entregar a \"").concat(cargaNome, "\": carga n\u00E3o aceita por ").concat(destino, "."));
+                }
+            });
         }
-        console.log("Carga(s) a bordo: ".concat(this.cargo.length));
-        this.cargo.forEach(function (c) {
-            console.log("- ".concat(c.constructor.name, ": ").concat(c.getName(), " (").concat(c.classify_size(), ")"));
-        });
+        console.log("Combust\u00EDvel restante: ".concat(this.transport.getRemainingFuel().toFixed(1)));
     };
     return Trip;
 }());
-var bio = new BioSample("Cultura Zeta");
-var capsule = new ArmoredCapsule("Blindada 007");
-var gemini = new Gemini("Gemini-X");
-gemini.addCargo(bio);
-gemini.addCargo(capsule);
-var mars = new Destination("Marte", 300000000);
-var viagem = new Trip(mars, gemini);
-viagem.startTrip();
+//SIMULAÇÃO
+function getRandomItem(array) {
+    return array[Math.floor(Math.random() * array.length)];
+}
+function generateRandomCargo() {
+    var cargoClasses = [BioSample, SupplyPack, ArmoredCapsule];
+    var CargoClass = getRandomItem(cargoClasses);
+    var names = ["Zeta", "Alpha", "Beta", "Orion", "Delta"];
+    return new CargoClass(getRandomItem(names));
+}
+var destinations = [
+    new Destination("Marte", 3000000, ["amostras biológicas", "pacote de suprimentos"]),
+    new Destination("Europa", 628000000, ["amostras biológicas", "cápsulas blindadas"]),
+    new Destination("Titã", 1220000000, ["ferramenta de mineração"]),
+    new Destination("Ganimedes", 800000000, ["amostras biológicas", "pacote de suprimentos", "tanques de oxigênio", "cápsulas blindadas", "ferramenta de mineração"]),
+    new Destination("Vênus", 160000000, ["amostras biológicas", "tanques de oxigênio"])
+];
+function generateRandomDestination() {
+    return getRandomItem(destinations);
+}
+function generateRandomTransport() {
+    var transports = [
+        new Vostok("Vostok-1"),
+        new Mercury("Mercury-A"),
+        new Gemini("Gemini-X")
+    ];
+    return getRandomItem(transports);
+}
+for (var i = 0; i < 5; i++) {
+    console.log("\n\uD83C\uDF0C Simula\u00E7\u00E3o ".concat(i + 1));
+    var transport = generateRandomTransport();
+    var destination = generateRandomDestination();
+    for (var j = 0; j < Math.floor(Math.random() * 3) + 1; j++) {
+        var cargo = generateRandomCargo();
+        transport.addCargo(cargo);
+    }
+    var trip = new Trip(destination, transport);
+    trip.startTrip();
+}
+var testTransport = generateRandomTransport();
+var successfulAdditions = 0;
+var attempts = 0;
+while (successfulAdditions === 0 && attempts < 10) {
+    var numCargas = Math.floor(Math.random() * 3) + 1; // entre 1 e 3
+    console.log("Tentando adicionar ".concat(numCargas, " carga(s) \u00E0 nave ").concat(testTransport.name));
+    for (var i = 0; i < numCargas; i++) {
+        var cargo = generateRandomCargo();
+        var added = testTransport.addCargo(cargo);
+        if (added) {
+            console.log("\u2705 Carga aceita: ".concat(cargo.getName(), " (").concat(cargo.classify_size(), ")"));
+            successfulAdditions++;
+        }
+        else {
+            console.log("\u274C Carga rejeitada: ".concat(cargo.getName(), " (").concat(cargo.classify_size(), ") incompat\u00EDvel com ").concat(testTransport.name));
+        }
+    }
+    attempts++;
+    if (successfulAdditions === 0) {
+        console.log("Nenhuma carga foi aceita. Tentando novamente...\n");
+    }
+}

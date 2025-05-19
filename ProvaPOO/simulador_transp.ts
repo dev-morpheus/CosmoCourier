@@ -52,7 +52,8 @@ class Transport {
     fuelConsumption: number;
     fuelCapacity: number;
     private cargos: Cargo[] = [];
-    
+    private fuelRemaining: number;
+
     constructor(name: string, capacity: number, level: string[], speed: number, fuelConsumption: number, fuelCapacity: number) {
         this.name = name;
         this.capacity = capacity;
@@ -60,6 +61,7 @@ class Transport {
         this.speed = speed;
         this.fuelConsumption = fuelConsumption;
         this.fuelCapacity = fuelCapacity;
+        this.fuelRemaining = fuelCapacity;
     }
 
     canTransport(cargo: Cargo): boolean {
@@ -88,9 +90,16 @@ class Transport {
     }
 
     canReach(distance: number): boolean {
-        return this.getFuelNeeded(distance) <= this.getFuelCapacity();
+        return this.getFuelNeeded(distance) <= this.fuelRemaining;
     }   
 
+    useFuel(amount: number): void {
+        this.fuelRemaining = Math.max(0, this.fuelRemaining - amount);
+    }
+
+    getRemainingFuel(): number {
+        return this.fuelRemaining;
+    }
 }
 
 class Vostok extends Transport {
@@ -125,7 +134,6 @@ class Destination {
     }
 }
 
-
 class Trip {
     origin: string;
     destination: Destination;
@@ -139,42 +147,42 @@ class Trip {
         this.cargo = transport.getCargo();
     }
 
-startTrip(): void {
-    const distMilhoes = (this.destination.distance / 1_000_000).toFixed(0);
-    const fuelBefore = this.transport.getFuelCapacity();
-    const fuelNeeded = this.transport.getFuelNeeded(this.destination.distance);
-    const fuelRemaining = fuelBefore - fuelNeeded;
-    const capacityRemaining = this.transport.capacity - this.cargo.length;
+    startTrip(): void {
+        const distMilhoes = (this.destination.distance / 1_000_000).toFixed(0);
+        const fuelNeeded = this.transport.getFuelNeeded(this.destination.distance);
 
-    const nomeNave = this.transport.name;
-    const destino = this.destination.name;
+        const nomeNave = this.transport.name;
+        const destino = this.destination.name;
 
-    console.log(`\nMissão: ${nomeNave} -> ${destino}`);
+        console.log(`\nMissão: ${nomeNave} -> ${destino}`);
 
-    // Estilo narrativo baseado na nave
-    if (this.transport instanceof Mercury || this.transport instanceof Gemini) {
-        console.log(`A ${nomeNave} chegou rapidamente a ${destino} (${distMilhoes} milhões de km).`);
-    } else {
-        console.log(`A ${nomeNave} viajou para ${destino} (${distMilhoes} milhões de km).`);
-    }
+        if (!this.transport.canReach(this.destination.distance)) {
+            console.log(`A ${nomeNave} não possui combustível suficiente para alcançar ${destino}. Missão abortada.`);
+            console.log(`Combustível restante: ${this.transport.getRemainingFuel().toFixed(1)}
+`);
+            return;
+        }
 
-    if (this.cargo.length === 0) {
-        console.log(`A ${nomeNave} não transportava nenhuma carga.`);
-    } else {
-        this.cargo.forEach(c => {
-            const cargaNome = c.getName();
-            const tipo = c.classify_size();
-            if (this.transport.canTransport(c) && this.destination.accepts(c)) {
-                console.log(`A ${nomeNave} entregou uma "${cargaNome}" a ${destino}.`);
-            } else {
-                console.log(`A ${nomeNave} não conseguiu entregar a "${cargaNome}": carga não aceita por ${destino}.`);
-            }
-        });
-    }
+        this.transport.useFuel(fuelNeeded);
 
-    console.log(`Combustível restante: ${fuelRemaining.toFixed(1)} | Capacidade restante: ${capacityRemaining}`);
+        if (this.cargo.length === 0) {
+            console.log(`A ${nomeNave} não transportava nenhuma carga.`);
+        } else {
+            this.cargo.forEach(c => {
+                const cargaNome = c.getName();
+                const tipo = c.classify_size();
+                if (this.transport.canTransport(c) && this.destination.accepts(c)) {
+                    console.log(`A ${nomeNave} entregou uma "${cargaNome}" a ${destino}.`);
+                } else {
+                    console.log(`A ${nomeNave} não conseguiu entregar a "${cargaNome}": carga não aceita por ${destino}.`);
+                }
+            });
+        }
+
+        console.log(`Combustível restante: ${this.transport.getRemainingFuel().toFixed(1)}`);
     }
 }
+
 
 
 
