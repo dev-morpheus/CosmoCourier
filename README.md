@@ -1,3 +1,5 @@
 # CosmoCourier
 
-### Trabalo avaliativo, sistema Cosmo Courier, equipe, Vitor, Luis Felipe, Cristiam
+## Trabalho avaliativo, sistema CosmoCourier
+
+### Equipe: Vitor, Luis Felipe, Cristiam
